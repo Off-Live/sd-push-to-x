@@ -55,10 +55,11 @@ def upload_folder():
     s3_client = get_s3_client()
     try:
         for folder_name in list_dirs:
-            files = getListOfFiles(folder_name)
-            for elem in files:
-                print('Uploading ' + elem)
-                s3_client.upload_file(elem, os.getenv('aws_s3_bucket'), elem)
+            if os.path.exists(folder_name):
+                files = getListOfFiles(folder_name)
+                for elem in files:
+                    print('Uploading ' + elem)
+                    s3_client.upload_file(elem, os.getenv('aws_s3_bucket'), elem)
     except ClientError as e:
         return "Failed pushing to S3"
     return "Done pushing to S3"
@@ -67,6 +68,7 @@ def upload_folder():
 def test():
     for folder_name in list_dirs:
         print(folder_name)
+        print(os.path.exists(folder_name))
     print(os.getenv('aws_access_key_id'))
     print(os.getenv('aws_secret_access_key'))
 
