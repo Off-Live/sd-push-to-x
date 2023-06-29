@@ -65,14 +65,6 @@ def upload_folder():
     return "Done pushing to S3"
 
 
-def test():
-    for folder_name in list_dirs:
-        print(folder_name)
-        print(os.path.exists(folder_name))
-    print(os.getenv('aws_access_key_id'))
-    print(os.getenv('aws_secret_access_key'))
-
-
 def on_ui_tabs():     
     with gr.Blocks() as pushToX:
         gr.Markdown(
@@ -84,6 +76,6 @@ def on_ui_tabs():
                 with gr.Row().style(equal_height=True):
                     out_folder = gr.Textbox(show_label=False)
                     btn_push_folder = gr.Button("Push To S3")
-            btn_push_folder.click(test, inputs=[], outputs=out_folder)
+            btn_push_folder.click(upload_folder, inputs=[], outputs=out_folder)
     return (pushToX, "Push To X", "pushToX"),
 script_callbacks.on_ui_tabs(on_ui_tabs)
