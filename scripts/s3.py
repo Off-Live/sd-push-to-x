@@ -1,12 +1,18 @@
 import os
 import boto3
-import numpy as np
 import gradio as gr
-# from huggingface_hub import model_info, create_repo, create_branch, upload_folder, upload_file
-# from huggingface_hub.utils import RepositoryNotFoundError, RevisionNotFoundError
 from botocore.exceptions import ClientError
 from modules import scripts, script_callbacks
+from modules.shared import opts, cmd_opts
 from subprocess import getoutput
+
+list_dirs = [
+    os.path.realpath(opts.outdir_samples or opts.outdir_txt2img_samples),
+    os.path.realpath(opts.outdir_samples or opts.outdir_img2img_samples),
+    os.path.realpath(opts.outdir_samples or opts.outdir_extras_samples),
+    os.path.realpath(opts.outdir_grids or opts.outdir_txt2img_grids),
+    os.path.realpath(opts.outdir_grids or opts.outdir_img2img_grids)
+]
 
 def run(command):
     out = getoutput(f"{command}")
@@ -31,7 +37,14 @@ def getListOfFiles(dirName):
                 
     return allFiles
 
-def upload_folder(folder_name):
+def get_s3_client():
+    return boto3.client('s3', 
+                    aws_access_key_id=os.getenv('aws_access_key_id'), 
+                    aws_secret_access_key=os.getenv('aws_secret_access_key'), 
+                    region_name=os.getenv('aws_region', 'ap-southeast-1')
+                )
+
+def upload_folder():
     """Upload a folder to an S3 bucket
 
     :param folder_name: Folder to upload
@@ -39,12 +52,14 @@ def upload_folder(folder_name):
     """
 
     # Upload the file
-    s3_client = boto3.client('s3')
+    s3_client = get_s3_client()
     try:
-        files = getListOfFiles(folder_name)
-        for elem in files:
-            print('Uploading ' + elem)
-            s3_client.upload_file(elem, '10k-asset', elem)
+        for folder_name in list_dirs:
+            if os.path.exists(folder_name):
+                files = getListOfFiles(folder_name)
+                for elem in files:
+                    print('Uploading ' + elem)
+                    s3_client.upload_file(elem, os.getenv('aws_s3_bucket'), elem)
     except ClientError as e:
         return "Failed pushing to S3"
     return "Done pushing to S3"
@@ -59,9 +74,8 @@ def on_ui_tabs():
         with gr.Group():
             with gr.Box():
                 with gr.Row().style(equal_height=True):
-                    text_folder_from = gr.Textbox(show_label=False, max_lines=1, placeholder="folder_from")
                     out_folder = gr.Textbox(show_label=False)
                     btn_push_folder = gr.Button("Push To S3")
-            btn_push_folder.click(upload_folder, inputs=[text_folder_from], outputs=out_folder)
+            btn_push_folder.click(upload_folder, inputs=[], outputs=out_folder)
     return (pushToX, "Push To X", "pushToX"),
 script_callbacks.on_ui_tabs(on_ui_tabs)
